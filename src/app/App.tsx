@@ -15,8 +15,11 @@ const CARD1_IMG = "https://images.unsplash.com/photo-1656420731611-ffae337fab6a?
 const CARD2_IMG = "https://images.unsplash.com/photo-1656420731047-3eb41c9d1dee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwyfHxzcG9ydCUyMG1vdG9yY3ljbGUlMjBibGFjayUyMGJhY2tncm91bmR8ZW58MXx8fHwxNzgxNTA4NDgzfDA&ixlib=rb-4.1.0&q=80&w=1080";
 const CARD3_IMG = "https://images.unsplash.com/photo-1767274859143-16dfbc2f174f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHxzdXBlcmJpa2UlMjBtb3RvcmN5Y2xlJTIwZGFyayUyMGRyYW1hdGljfGVufDF8fHx8MTc4MTUwODQ4Mnww&ixlib=rb-4.1.0&q=80&w=1080";
 
-// Cấu hình ID Fanpage Facebook của bạn tại đây
+// Cấu hình kết nối Fanpage Facebook dự phòng
 const FACEBOOK_PAGE_ID = "YOUR_PAGE_ID"; 
+
+// CẤU HÌNH WEBHOOK N8N CỦA BẠN TẠI ĐÂY
+const N8N_WEBHOOK_URL = "https://ngocthien213.app.n8n.cloud/webhook/fb-webhook"; 
 
 function HeroSection({ onBookRide, onNavigate }: { onBookRide: (model?: string) => void; onNavigate: (id: string) => void }) {
   return (
@@ -423,8 +426,19 @@ export default function App() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const [sessionId, setSessionId] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Tạo Session ID duy nhất lưu vào localStorage để n8n quản lý bộ nhớ hội thoại (Memory)
+  useEffect(() => {
+    let session = localStorage.getItem("apexmoto_chat_session");
+    if (!session) {
+      session = "session_" + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem("apexmoto_chat_session", session);
+    }
+    setSessionId(session);
+  }, []);
 
   // Tự động cuộn xuống tin nhắn mới nhất trong khung chat
   useEffect(() => {
@@ -453,8 +467,8 @@ export default function App() {
     setIsSubmitted(true);
   };
 
-  // Trả lời tin nhắn chatbot dựa trên từ khóa tiếng Việt
-  const getBotResponse = (inputText: string): string => {
+  // Trả lời tin nhắn chatbot offline (Giả lập dự phòng khi chưa cấu hình Link Webhook n8n)
+  const getOfflineBotResponse = (inputText: string): string => {
     const text = inputText.toLowerCase();
     
     if (text.includes("shadow") || text.includes("mạnh nhất") || text.includes("tốc độ") || text.includes("nhanh nhất")) {
@@ -464,7 +478,7 @@ export default function App() {
       return "Bạn có thể đăng ký chạy thử xe miễn phí bằng cách nhấn vào nút 'ĐĂNG KÝ LÁI THỬ' ở menu trên cùng trang web và điền thông tin hẹn nhé!";
     }
     if (text.includes("giá") || text.includes("bao nhiêu") || text.includes("tiền") || text.includes("bán")) {
-      return "Giá dự kiến các dòng xe: Shadow RS khoảng 850 triệu VNĐ, Apex GT khoảng 720 triệu VNĐ, và Nightmare X khoảng 650 triệu VNĐ. Chi tiết xin vui lòng inbox Fanpage chính thức.";
+      return "Giá bán dự kiến các dòng xe: Shadow RS khoảng 850 triệu VNĐ, Apex GT khoảng 720 triệu VNĐ, và Nightmare X khoảng 650 triệu VNĐ. Chi tiết xin vui lòng điền form đăng ký lái thử.";
     }
     if (text.includes("đại lý") || text.includes("ở đâu") || text.includes("showroom") || text.includes("địa chỉ")) {
       return "Showroom chính thức của ApexMoto hiện có tại 2 thành phố lớn: Hà Nội (123 Lê Văn Lương) và TP. Hồ Chí Minh (456 Nguyễn Thị Minh Khai).";
@@ -476,31 +490,72 @@ export default function App() {
       return "NIGHTMARE X là dòng xe quái vật đô thị (Urban Terror), thiết kế phá cách, linh hoạt trong ngõ hẻm và sở hữu gia tốc tức thì ấn tượng.";
     }
 
-    return "Cảm ơn bạn đã đặt câu hỏi! Để được nhân viên tư vấn chi tiết hơn về giá lăn bánh và khuyến mãi, bạn có thể click nút 'Trò chuyện trên Facebook' ở góc trên hộp chat để kết nối trực tiếp đến Fanpage của chúng tôi nhé.";
+    return "Cảm ơn bạn đã nhắn tin cho ApexMoto! Nhấp vào nút Messenger ở góc trên bên phải khung chat để gửi tin nhắn đến Fanpage của chúng tôi hoặc điền form Đăng ký lái thử nhé.";
   };
 
   // Gửi tin nhắn
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || chatInput;
     if (!text.trim()) return;
 
-    // Add user message
+    // 1. Thêm tin nhắn của User vào khung chat
     const userMsg = { sender: "user", text, time: "Vừa xong" };
     setChatMessages((prev) => [...prev, userMsg]);
-    if (!textToSend) setChatInput(""); // Clear input
+    if (!textToSend) setChatInput(""); // Clear ô nhập
 
-    // Kích hoạt trạng thái Bot đang nhập tin nhắn
+    // 2. Kích hoạt trạng thái Bot đang nhập tin nhắn
     setIsBotTyping(true);
 
-    setTimeout(() => {
-      const botResponseText = getBotResponse(text);
-      const botMsg = { sender: "bot", text: botResponseText, time: "Vừa xong" };
-      setChatMessages((prev) => [...prev, botMsg]);
-      setIsBotTyping(false);
-    }, 1200);
+    // Kiểm tra xem đã cấu hình Webhook n8n chưa
+    const isN8nConfigured = N8N_WEBHOOK_URL && N8N_WEBHOOK_URL !== "YOUR_N8N_WEBHOOK_URL";
+
+    if (isN8nConfigured) {
+      try {
+        // 3. Gửi POST Request sang Webhook n8n
+        const response = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: text,
+            sessionId: sessionId || "default_session"
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể kết nối đến n8n");
+        }
+
+        const data = await response.json();
+        
+        // Trích xuất phản hồi từ n8n (hỗ trợ nhiều định dạng đầu ra của node AI n8n)
+        const botReplyText = data.output || data.response || data.reply || data.text || (typeof data === "string" ? data : JSON.stringify(data));
+
+        const botMsg = { sender: "bot", text: botReplyText || "Tôi nhận được tín hiệu từ n8n nhưng phản hồi bị trống.", time: "Vừa xong" };
+        setChatMessages((prev) => [...prev, botMsg]);
+      } catch (error) {
+        console.error("Lỗi Webhook n8n:", error);
+        // Trả lời dự phòng bằng chatbot offline nếu n8n bị lỗi kết nối
+        setTimeout(() => {
+          const fallbackReply = "Hiện tại máy chủ AI thông qua n8n của tôi đang gặp chút sự cố kết nối. " + getOfflineBotResponse(text);
+          setChatMessages((prev) => [...prev, { sender: "bot", text: fallbackReply, time: "Vừa xong" }]);
+        }, 1000);
+      } finally {
+        setIsBotTyping(false);
+      }
+    } else {
+      // Sử dụng chatbot offline giả lập nếu chưa điền URL n8n
+      setTimeout(() => {
+        const botResponseText = getOfflineBotResponse(text);
+        const botMsg = { sender: "bot", text: botResponseText, time: "Vừa xong" };
+        setChatMessages((prev) => [...prev, botMsg]);
+        setIsBotTyping(false);
+      }, 1000);
+    }
   };
 
-  // Chuyển hướng nhanh sang Facebook Messenger thật
+  // Chuyển hướng sang Facebook Messenger Fanpage thật
   const handleOpenRealMessenger = () => {
     window.open(`https://m.me/${FACEBOOK_PAGE_ID}`, "_blank", "noopener,noreferrer");
   };
@@ -519,7 +574,7 @@ export default function App() {
       {/* Bong bóng kích hoạt chat */}
       <FloatingChatButton onClick={() => setIsChatOpen(!isChatOpen)} />
 
-      {/* KHUNG CHAT MESSENGER TÍCH HỢP TRỰC TIẾP TRÊN TRANG (Không cần đăng nhập) */}
+      {/* KHUNG CHAT MESSENGER TÍCH HỢP TRỰC TIẾP TRÊN TRANG (Không cần đăng nhập, kết nối n8n/giả lập) */}
       {isChatOpen && (
         <div className="fixed bottom-28 right-8 w-[380px] h-[500px] bg-[#131313] border border-[rgba(255,255,255,0.12)] rounded-2xl flex flex-col z-50 shadow-2xl overflow-hidden transition-all duration-300">
           
@@ -536,7 +591,7 @@ export default function App() {
               </div>
               <div className="flex flex-col">
                 <span className="text-white text-sm font-semibold">Trợ lý ApexMoto</span>
-                <span className="text-white/80 text-[11px]">Thường phản hồi ngay lập tức</span>
+                <span className="text-white/80 text-[11px]">Trực tuyến • Phản hồi tự động</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
