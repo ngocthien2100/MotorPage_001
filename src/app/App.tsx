@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import svgPaths from "../imports/Html→Body/svg-l64atcqoce";
 
-// Khai báo kiểu TypeScript toàn cục cho SDK Facebook
+// Hỗ trợ kiểu TypeScript toàn cục
 declare global {
   interface Window {
     fbAsyncInit: any;
@@ -16,7 +16,7 @@ const CARD2_IMG = "https://images.unsplash.com/photo-1656420731047-3eb41c9d1dee?
 const CARD3_IMG = "https://images.unsplash.com/photo-1767274859143-16dfbc2f174f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHxzdXBlcmJpa2UlMjBtb3RvcmN5Y2xlJTIwZGFyayUyMGRyYW1hdGljfGVufDF8fHx8MTc4MTUwODQ4Mnww&ixlib=rb-4.1.0&q=80&w=1080";
 
 // Cấu hình ID Fanpage Facebook của bạn tại đây
-const FACEBOOK_PAGE_ID = "YOUR_PAGE_ID"; // HƯỚNG DẪN: Thay thế bằng ID thực tế của Fanpage Facebook của bạn
+const FACEBOOK_PAGE_ID = "YOUR_PAGE_ID"; 
 
 function HeroSection({ onBookRide, onNavigate }: { onBookRide: (model?: string) => void; onNavigate: (id: string) => void }) {
   return (
@@ -53,7 +53,7 @@ function HeroSection({ onBookRide, onNavigate }: { onBookRide: (model?: string) 
           </div>
           <div className="content-stretch flex gap-[16px] items-start pt-[24px] relative shrink-0 w-full">
             <button 
-              className="bg-[#4b5320] hover:bg-[#5c6628] transition-colors duration-200 content-stretch flex flex-col items-center justify-center px-[41px] py-[17px] relative shrink-0 cursor-pointer border-0"
+              className="bg-[#4b5320] hover:bg-[#5c6628] transition-colors duration-200 content-stretch flex flex-col items-center justify-center px-[41px] py-[17px] relative shrink-0 cursor-pointer border-0 animate-pulse"
               onClick={() => onBookRide()}
             >
               <div aria-hidden className="absolute border border-[rgba(255,255,255,0.1)] border-solid inset-0 pointer-events-none" />
@@ -379,33 +379,19 @@ function HeaderTopNavBar({ onNavigate, onBookRide }: { onNavigate: (id: string) 
   );
 }
 
-function FloatingChatWidget({ pageId }: { pageId: string }) {
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  const handleClick = () => {
-    // Dự phòng (Fallback): Mở trang chat trực tiếp với page qua link m.me nếu SDK chưa chạy hoặc chưa whitelist domain
-    window.open(`https://m.me/${pageId}`, "_blank", "noopener,noreferrer");
-  };
-
+// BONG BÓNG CHAT Messenger nổi cố định góc màn hình
+function FloatingChatButton({ onClick }: { onClick: () => void }) {
   return (
     <div 
-      className="fixed bottom-8 right-8 content-stretch flex flex-col items-end z-50 cursor-pointer group"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onClick={handleClick}
+      className="fixed bottom-8 right-8 content-stretch flex flex-col items-end z-50 cursor-pointer group transition-transform duration-300 hover:scale-110"
+      onClick={onClick}
     >
-      {/* Tooltip hiển thị khi hover */}
-      <div className={`backdrop-blur-[12px] bg-[#131313] content-stretch flex flex-col h-[50.39px] items-start p-[18px] mb-2 transition-all duration-300 rounded border border-[#0084FF] ${showTooltip ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}>
-        <div className="[word-break:break-word] flex flex-col font-['Geist',sans-serif] font-semibold justify-center leading-[0] relative shrink-0 text-[12px] text-white tracking-[1.2px] uppercase whitespace-nowrap">
-          <p className="leading-[14.4px]">CHAT MESSENGER</p>
-        </div>
-      </div>
-      <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 size-[64px] transition-transform duration-300 hover:scale-110">
+      <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 size-[64px]">
         <div className="absolute bg-[rgba(0,132,255,0.2)] inset-0 rounded-[9999px] animate-ping opacity-75" />
         <div className="absolute bg-[rgba(0,132,255,0.4)] inset-0 rounded-[9999px]" />
         <div className="flex-[1_0_0] min-h-px pointer-events-none relative rounded-[9999px] w-full">
           <div className="absolute inset-0 rounded-[9999px] bg-[#1c1b1b] flex items-center justify-center">
-            {/* Logo Facebook Messenger chính thức */}
+            {/* SVG Logo Facebook Messenger */}
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
               <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" fill="#0084FF" />
               <path d="M7.5 13.5l3.5-3.5 3.5 3.5 3.5-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -430,6 +416,21 @@ export default function App() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // States dành cho khung Chatbot trực tiếp trên trang
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { sender: "bot", text: "Xin chào! Cảm ơn bạn đã ghé thăm ApexMoto. Tôi là Trợ lý ảo hỗ trợ thông tin nhanh. Bạn có câu hỏi nào cần giải đáp không?", time: "Vừa xong" }
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isBotTyping, setIsBotTyping] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Tự động cuộn xuống tin nhắn mới nhất trong khung chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, isBotTyping]);
+
   // Cuộn trang mượt mà
   const handleNavigate = (id: string) => {
     const element = document.getElementById(id);
@@ -446,62 +447,63 @@ export default function App() {
     setIsBookingOpen(true);
   };
 
-  // Xử lý gửi Form
+  // Xử lý gửi Form đăng ký lái thử
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitted(true);
   };
 
-  // Tích hợp Facebook SDK cho Chatbot
-  useEffect(() => {
-    // Chỉ kích hoạt nếu FACEBOOK_PAGE_ID đã được cấu hình hợp lệ
-    if (!FACEBOOK_PAGE_ID || FACEBOOK_PAGE_ID === "YOUR_PAGE_ID") {
-      return;
+  // Trả lời tin nhắn chatbot dựa trên từ khóa tiếng Việt
+  const getBotResponse = (inputText: string): string => {
+    const text = inputText.toLowerCase();
+    
+    if (text.includes("shadow") || text.includes("mạnh nhất") || text.includes("tốc độ") || text.includes("nhanh nhất")) {
+      return "Dòng xe mạnh nhất hiện tại là SHADOW RS sở hữu động cơ 215 mã lực (HP) và mô-men xoắn cực đại 124 NM, sinh ra từ đường đua và tối ưu cho tốc độ.";
+    }
+    if (text.includes("lái thử") || text.includes("đăng ký") || text.includes("chạy thử") || text.includes("đặt lịch")) {
+      return "Bạn có thể đăng ký chạy thử xe miễn phí bằng cách nhấn vào nút 'ĐĂNG KÝ LÁI THỬ' ở menu trên cùng trang web và điền thông tin hẹn nhé!";
+    }
+    if (text.includes("giá") || text.includes("bao nhiêu") || text.includes("tiền") || text.includes("bán")) {
+      return "Giá dự kiến các dòng xe: Shadow RS khoảng 850 triệu VNĐ, Apex GT khoảng 720 triệu VNĐ, và Nightmare X khoảng 650 triệu VNĐ. Chi tiết xin vui lòng inbox Fanpage chính thức.";
+    }
+    if (text.includes("đại lý") || text.includes("ở đâu") || text.includes("showroom") || text.includes("địa chỉ")) {
+      return "Showroom chính thức của ApexMoto hiện có tại 2 thành phố lớn: Hà Nội (123 Lê Văn Lương) và TP. Hồ Chí Minh (456 Nguyễn Thị Minh Khai).";
+    }
+    if (text.includes("apex gt")) {
+      return "APEX GT là dòng xe bậc thầy đường trường (Endurance Master), được thiết kế tối ưu cho hành trình dài, êm ái và siêu bền bỉ.";
+    }
+    if (text.includes("nightmare x")) {
+      return "NIGHTMARE X là dòng xe quái vật đô thị (Urban Terror), thiết kế phá cách, linh hoạt trong ngõ hẻm và sở hữu gia tốc tức thì ấn tượng.";
     }
 
-    // 1. Tạo container fb-root
-    let fbRoot = document.getElementById("fb-root");
-    if (!fbRoot) {
-      fbRoot = document.createElement("div");
-      fbRoot.id = "fb-root";
-      document.body.appendChild(fbRoot);
-    }
+    return "Cảm ơn bạn đã đặt câu hỏi! Để được nhân viên tư vấn chi tiết hơn về giá lăn bánh và khuyến mãi, bạn có thể click nút 'Trò chuyện trên Facebook' ở góc trên hộp chat để kết nối trực tiếp đến Fanpage của chúng tôi nhé.";
+  };
 
-    // 2. Tạo div chat plugin
-    let fbCustomerChat = document.getElementById("fb-customer-chat");
-    if (!fbCustomerChat) {
-      fbCustomerChat = document.createElement("div");
-      fbCustomerChat.id = "fb-customer-chat";
-      fbCustomerChat.className = "fb-customerchat";
-      fbCustomerChat.setAttribute("page_id", FACEBOOK_PAGE_ID);
-      fbCustomerChat.setAttribute("attribution", "biz_inbox");
-      document.body.appendChild(fbCustomerChat);
-    }
+  // Gửi tin nhắn
+  const handleSendMessage = (textToSend?: string) => {
+    const text = textToSend || chatInput;
+    if (!text.trim()) return;
 
-    // 3. Cấu hình SDK
-    window.fbAsyncInit = function() {
-      window.FB.init({
-        xfbml            : true,
-        version          : 'v18.0'
-      });
-    };
+    // Add user message
+    const userMsg = { sender: "user", text, time: "Vừa xong" };
+    setChatMessages((prev) => [...prev, userMsg]);
+    if (!textToSend) setChatInput(""); // Clear input
 
-    // 4. Nhúng thư viện SDK Facebook
-    let js = document.getElementById("facebook-jssdk") as HTMLScriptElement;
-    if (!js) {
-      js = document.createElement("script") as HTMLScriptElement;
-      js.id = "facebook-jssdk";
-      js.src = "https://connect.facebook.net/vi_VN/sdk/xfbml.customerchat.js";
-      document.head.appendChild(js);
-    }
+    // Kích hoạt trạng thái Bot đang nhập tin nhắn
+    setIsBotTyping(true);
 
-    // Cleanup khi component bị hủy
-    return () => {
-      document.getElementById("fb-root")?.remove();
-      document.getElementById("fb-customer-chat")?.remove();
-      document.getElementById("facebook-jssdk")?.remove();
-    };
-  }, []);
+    setTimeout(() => {
+      const botResponseText = getBotResponse(text);
+      const botMsg = { sender: "bot", text: botResponseText, time: "Vừa xong" };
+      setChatMessages((prev) => [...prev, botMsg]);
+      setIsBotTyping(false);
+    }, 1200);
+  };
+
+  // Chuyển hướng nhanh sang Facebook Messenger thật
+  const handleOpenRealMessenger = () => {
+    window.open(`https://m.me/${FACEBOOK_PAGE_ID}`, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div
@@ -513,7 +515,125 @@ export default function App() {
       <SectionTechSpecsGrid />
       <Footer onNavigate={handleNavigate} />
       <HeaderTopNavBar onNavigate={handleNavigate} onBookRide={() => handleBookRide()} />
-      <FloatingChatWidget pageId={FACEBOOK_PAGE_ID} />
+      
+      {/* Bong bóng kích hoạt chat */}
+      <FloatingChatButton onClick={() => setIsChatOpen(!isChatOpen)} />
+
+      {/* KHUNG CHAT MESSENGER TÍCH HỢP TRỰC TIẾP TRÊN TRANG (Không cần đăng nhập) */}
+      {isChatOpen && (
+        <div className="fixed bottom-28 right-8 w-[380px] h-[500px] bg-[#131313] border border-[rgba(255,255,255,0.12)] rounded-2xl flex flex-col z-50 shadow-2xl overflow-hidden transition-all duration-300">
+          
+          {/* Header hộp chat */}
+          <div className="bg-gradient-to-r from-[#0084FF] to-[#00A2FF] p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Avatar Bot */}
+              <div className="relative size-[38px] rounded-full bg-[#1c1b1b] flex items-center justify-center border border-white/20">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" fill="#C3CC8C" />
+                  <path d="M8 11h8M8 15h5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <span className="absolute bottom-0 right-0 size-2.5 bg-green-500 rounded-full border border-[#131313]"></span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-white text-sm font-semibold">Trợ lý ApexMoto</span>
+                <span className="text-white/80 text-[11px]">Thường phản hồi ngay lập tức</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Nút liên kết FB thật */}
+              <button 
+                title="Trò chuyện qua ứng dụng Messenger"
+                className="text-white hover:bg-white/10 p-1.5 rounded-full cursor-pointer bg-transparent border-0 transition-colors"
+                onClick={handleOpenRealMessenger}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
+                </svg>
+              </button>
+              {/* Nút Đóng */}
+              <button 
+                className="text-white hover:bg-white/10 p-1.5 rounded-full cursor-pointer bg-transparent border-0 transition-colors"
+                onClick={() => setIsChatOpen(false)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Danh sách tin nhắn */}
+          <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 scrollbar-thin scrollbar-thumb-white/10">
+            {chatMessages.map((msg, index) => (
+              <div 
+                key={index}
+                className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${
+                  msg.sender === "bot" 
+                    ? "bg-[#222] text-[#e4e4e7] rounded-bl-sm self-start" 
+                    : "bg-[#0084FF] text-white rounded-br-sm self-end"
+                }`}
+              >
+                {msg.text}
+              </div>
+            ))}
+            
+            {/* Trạng thái Bot đang nhập tin nhắn */}
+            {isBotTyping && (
+              <div className="bg-[#222] text-[#a1a1aa] rounded-2xl rounded-bl-sm p-3 self-start max-w-[80%] flex items-center gap-1.5">
+                <span className="size-1.5 bg-[#8e9192] rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                <span className="size-1.5 bg-[#8e9192] rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                <span className="size-1.5 bg-[#8e9192] rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Gợi ý câu hỏi nhanh (Quick replies) */}
+          <div className="px-4 py-2 border-t border-[rgba(255,255,255,0.06)] flex flex-wrap gap-1.5 bg-black/20">
+            {[
+              "Dòng xe mạnh nhất?",
+              "Giá Shadow RS?",
+              "Địa chỉ ở đâu?",
+              "Đăng ký lái thử?"
+            ].map((q) => (
+              <button
+                key={q}
+                className="bg-[#1c1b1b] hover:bg-[#2a2a2a] text-[#c3cc8c] border border-[#c3cc8c]/20 hover:border-[#c3cc8c]/40 text-xs px-2.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer text-left"
+                onClick={() => handleSendMessage(q)}
+                disabled={isBotTyping}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+
+          {/* Ô nhập tin nhắn chân trang */}
+          <div className="p-3 border-t border-[rgba(255,255,255,0.08)] bg-[#1c1b1b] flex items-center gap-2">
+            <input 
+              type="text" 
+              placeholder="Nhập câu hỏi của bạn..."
+              className="flex-1 bg-[#222] text-white placeholder-[#8e9192] border border-transparent focus:border-[#0084FF] text-sm p-2.5 rounded-lg focus:outline-none"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSendMessage();
+              }}
+              disabled={isBotTyping}
+            />
+            <button
+              className="bg-[#0084FF] hover:bg-[#0074E0] disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-2.5 rounded-lg border-0 cursor-pointer transition-colors"
+              onClick={() => handleSendMessage()}
+              disabled={isBotTyping || !chatInput.trim()}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal Đăng ký lái thử */}
       {isBookingOpen && (
